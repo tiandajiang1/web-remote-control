@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WebRTC Host</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <main class="host-page">
+      <section class="host-shell">
+        <div class="host-bar">
+          <div>
+            <strong>WebRTC Host</strong>
+            <span id="hostStatus">未共享</span>
+          </div>
+          <input id="hostToken" type="password" placeholder="HTTP Token">
+          <input id="room" value="main" aria-label="Room">
+          <button id="startHost">共享屏幕</button>
+          <button id="stopHost">停止</button>
+        </div>
+        <video id="preview" autoplay muted playsinline></video>
+        <textarea id="hostLog" readonly rows="8" placeholder="连接日志"></textarea>
+      </section>
+    </main>
+    <script src="/host.js"></script>
+  </body>
+</html>

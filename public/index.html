@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Web Remote Control</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <main class="app">
+      <section class="viewer" aria-label="远程屏幕">
+        <div class="topbar">
+          <div>
+            <strong>Remote Control</strong>
+            <span id="status">未连接</span>
+            <span id="traffic" class="traffic">流量 --</span>
+          </div>
+          <div class="toolbar">
+            <select id="channel" aria-label="控制通道">
+              <option value="http">本机 HTTP</option>
+              <option value="serial">串口控制</option>
+            </select>
+            <input id="token" type="password" placeholder="HTTP Token">
+            <button id="connect">连接</button>
+            <button id="refresh">刷新</button>
+            <button id="qualityMode">流畅</button>
+            <button id="togglePanel">面板</button>
+          </div>
+        </div>
+        <div id="screenWrap" class="screen-wrap">
+          <video id="webrtcVideo" autoplay playsinline></video>
+          <img id="screen" alt="远程屏幕预览" draggable="false">
+          <div id="empty">先连接 HTTP 截图服务，串口用于发送控制指令</div>
+        </div>
+      </section>
+
+      <aside class="panel" aria-label="控制面板">
+        <div class="group">
+          <h2>串口</h2>
+          <div class="split">
+            <select id="baud">
+              <option value="9600">9600</option>
+              <option value="115200" selected>115200</option>
+              <option value="230400">230400</option>
+              <option value="460800">460800</option>
+              <option value="921600">921600</option>
+            </select>
+            <button id="serialConnect">选择串口</button>
+          </div>
+          <div class="split">
+            <button id="serialDisconnect">断开串口</button>
+            <button id="serialPing">发送 PING</button>
+          </div>
+          <textarea id="serialLog" rows="5" readonly placeholder="串口收发日志"></textarea>
+        </div>
+
+        <div class="group">
+          <h2>输入</h2>
+          <textarea id="textInput" rows="5" placeholder="输入文字后发送到远端当前光标位置"></textarea>
+          <button id="sendText">发送文字</button>
+          <div class="keys">
+            <button data-key="enter">Enter</button>
+            <button data-key="tab">Tab</button>
+            <button data-key="escape">Esc</button>
+            <button data-key="backspace">Backspace</button>
+            <button data-key="delete">Del</button>
+            <button data-key="selectAll">Ctrl+A</button>
+            <button data-key="copy">Ctrl+C</button>
+            <button data-key="paste">Ctrl+V</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h2>剪贴板</h2>
+          <textarea id="clip" rows="6" placeholder="远端剪贴板内容"></textarea>
+          <div class="split">
+            <button id="readClip">读取远端</button>
+            <button id="writeClip">写入远端</button>
+          </div>
+          <div class="split">
+            <button id="pasteLocal">粘贴本机</button>
+            <button id="copyLocal">复制本机</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h2>文件下载</h2>
+          <input id="filePath" placeholder="输入目录路径，例如 C:\\Users\\t\\Downloads">
+          <div class="split">
+            <button id="listFiles">列目录</button>
+            <button id="parentDir">上一级</button>
+          </div>
+          <div id="fileList" class="file-list"></div>
+        </div>
+
+        <div class="group">
+          <h2>鼠标</h2>
+          <p>在屏幕预览上移动鼠标，单击左键，右键菜单用下方按钮。串口模式会发送 JSON 行协议。</p>
+          <button id="rightClick">右键点击当前位置</button>
+        </div>
+      </aside>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
