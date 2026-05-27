@@ -17,6 +17,10 @@ const state = {
   useWebRtc: false,
   lastFrameMs: 0,
   qualityMode: localStorage.getItem("remote-quality-mode") || "fast",
+  idleTimeoutMs: 60_000,
+  idleTimer: null,
+  streamPausedForIdle: false,
+  lastActivityAt: performance.now(),
   traffic: {
     totalBytes: 0,
     samples: [],
@@ -44,6 +48,37 @@ function setStatus(text, ok = true) {
   const el = $("status");
   el.textContent = text;
   el.className = ok ? "ok" : "bad";
+}
+
+function setScreenVisible(visible) {
+  const img = $("screen");
+  img.style.opacity = visible ? "1" : "0";
+  $("empty").style.display = visible ? "none" : "block";
+  if (!visible) $("empty").textContent = "鼠标静止，画面已暂停。移动鼠标恢复。";
+}
+
+function scheduleIdlePause() {
+  clearTimeout(state.idleTimer);
+  state.idleTimer = setTimeout(pauseStreamForIdle, state.idleTimeoutMs);
+}
+
+function pauseStreamForIdle() {
+  if (!state.connected || state.streamPausedForIdle) return;
+  state.streamPausedForIdle = true;
+  stopStream();
+  setScreenVisible(false);
+  setStatus("鼠标 60 秒未动，已暂停图像流", true);
+}
+
+function noteActivity() {
+  state.lastActivityAt = performance.now();
+  if (!state.connected) return;
+  scheduleIdlePause();
+  if (state.streamPausedForIdle) {
+    state.streamPausedForIdle = false;
+    setScreenVisible(true);
+    startLowLatencyStream();
+  }
 }
 
 function qualityModeLabel() {
@@ -424,7 +459,7 @@ function startMjpegStream() {
 }
 
 async function pullFrameLoop(seq) {
-  if (!state.connected || seq !== state.streamSeq) return;
+  if (!state.connected || state.streamPausedForIdle || seq !== state.streamSeq) return;
   const img = $("screen");
   const { targetWidth, quality } = streamParams();
   const started = performance.now();
@@ -452,6 +487,7 @@ async function pullFrameLoop(seq) {
     img.onload = () => {
       if (oldUrl) URL.revokeObjectURL(oldUrl);
       img.style.display = "block";
+      img.style.opacity = "1";
       $("empty").style.display = "none";
       fitScreen();
     };
@@ -471,8 +507,11 @@ async function pullFrameLoop(seq) {
 
 function startLowLatencyStream() {
   if (!state.connected) return;
+  state.streamPausedForIdle = false;
+  setScreenVisible(true);
   stopStream();
   const seq = ++state.streamSeq;
+  scheduleIdlePause();
   pullFrameLoop(seq);
 }
 
@@ -481,6 +520,7 @@ async function connectHttp() {
   localStorage.setItem("remote-token", state.token);
   const info = await api("/api/info");
   state.connected = true;
+  noteActivity();
   resetTraffic();
   state.screen = { width: info.width, height: info.height, scale: 1 };
   const img = $("screen");
@@ -605,6 +645,7 @@ $("serialPing").addEventListener("click", () => serialWrite({ kind: "ping", time
 
 $("screen").addEventListener("mousemove", event => {
   if (!state.connected) return;
+  noteActivity();
   const point = screenPoint(event);
   if (Math.abs(point.x - state.lastMouse.x) + Math.abs(point.y - state.lastMouse.y) < 24) return;
   queueMouseMove(point);
@@ -612,6 +653,7 @@ $("screen").addEventListener("mousemove", event => {
 
 $("screen").addEventListener("pointerdown", event => {
   if (!state.connected) return;
+  noteActivity();
   $("screen").setPointerCapture(event.pointerId);
   sendMouse("down", screenPoint(event), event.button === 2 ? "right" : "left")
     .then(() => startLowLatencyStream())
@@ -620,6 +662,7 @@ $("screen").addEventListener("pointerdown", event => {
 
 $("screen").addEventListener("pointerup", event => {
   if (!state.connected) return;
+  noteActivity();
   sendMouse("up", screenPoint(event), event.button === 2 ? "right" : "left")
     .then(() => startLowLatencyStream())
     .catch(error => setStatus(error.message, false));
@@ -636,10 +679,16 @@ $("screen").addEventListener("contextmenu", async event => {
 
 $("screen").addEventListener("wheel", event => {
   if (!state.connected) return;
+  noteActivity();
   event.preventDefault();
   const delta = event.deltaY < 0 ? 120 : -120;
   sendCommand("mouse", { type: "wheel", delta, ...screenPoint(event) }).catch(error => setStatus(error.message, false));
 }, { passive: false });
+
+$("screenWrap").addEventListener("pointermove", () => {
+  if (!state.connected) return;
+  noteActivity();
+});
 
 window.addEventListener("resize", fitScreen);
 window.matchMedia("(max-width: 900px)").addEventListener("change", () => {
