@@ -78,9 +78,8 @@ Stop-MatchingNode "*tunnel.js*"
 $remotePrepCommand = @"
 (command -v sudo >/dev/null 2>&1 && sudo fuser -k $TunnelRemotePort/tcp || fuser -k $TunnelRemotePort/tcp) || true
 if [ -f /root/remote-control-proxy/proxy.py ]; then
-  if ! pgrep -f '^python3 /root/remote-control-proxy/proxy.py' >/dev/null 2>&1; then
-    nohup python3 /root/remote-control-proxy/proxy.py >/root/remote-control-proxy/proxy.log 2>&1 &
-  fi
+  for pid in `$(pgrep -f '^python3 /root/remote-control-proxy/proxy.py' || true); do kill -9 "`$pid" || true; done
+  nohup python3 /root/remote-control-proxy/proxy.py >/root/remote-control-proxy/proxy.log 2>&1 &
 fi
 "@
 
